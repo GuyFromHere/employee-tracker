@@ -1,5 +1,10 @@
 module.exports = [
 	{
+		type: "input",
+		name: "start",
+		message: "Hello!"
+	},
+	{
 		type: "list",
 		name: "action",
 		message: "What would you like to do?",
@@ -16,9 +21,17 @@ module.exports = [
 	{
 		type: "input",
 		name: "first_name",
-		message: "Enter the Employee's first name:",
-		when: function(answers) {
+		message: "Enter the employee's first name:",
+		when: function (answers) {
 			return answers.action == "Add Employee";
+		}
+	},
+	{
+		type: "input",
+		name: "last_name",
+		message: "Enter the employee's last name:",
+		when: function (answers) {
+			return answers.first_name != "";
 		}
 	}
 ];

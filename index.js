@@ -21,9 +21,9 @@ function processAnswers(answers) {
 	}
 }
 
-const run = function() {
+const run = function () {
 	return inquirer.prompt(questions).then(answers => {
-		processAnswers(answers);
+		//processAnswers(answers);
 	});
 };
 
