@@ -6,13 +6,13 @@ function processAnswers(answers) {
 	console.log("And your answers are:", answers);
 	if (answers.action == "View All Employees") {
 		db_conn.query(
-			"SELECT * FROM employeeTracker.employees",
+			"SELECT * FROM employeeTracker.role",
 			(err, result) => {
 				if (err) throw err;
 				const stringResult = JSON.stringify(result);
 				const parsedResult = JSON.parse(stringResult);
 				parsedResult.forEach(item => {
-					console.log(item.first_name + " " + item.last_name);
+					console.log(item.id + " " + item.title);
 				});
 			}
 		);
@@ -21,9 +21,9 @@ function processAnswers(answers) {
 	}
 }
 
-const run = function () {
+const run = function() {
 	return inquirer.prompt(questions).then(answers => {
-		//processAnswers(answers);
+		processAnswers(answers);
 	});
 };
 
