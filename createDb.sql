@@ -88,14 +88,9 @@ values
 -- update employee manager
 
 -- View All Employees
-SELECT e.id, e.first_name, e.last_name, r.title
-FROM employee e
-JOIN role r on 
-		(SELECT r.title FROM role 
-		WHERE e.role_id = r.id;)
+SELECT e.id, concat(e.first_name, " ", e.last_name) AS name, r.title from employee e
+JOIN role r ON r.id = e.role_id;
 
-SELECT id, concat(first_name, " ", last_name) AS name, role.title from employee
-JOIN role ON ;
 -- View all Employees by department
 -- view all employees by manager
 -- add employee

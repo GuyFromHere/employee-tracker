@@ -1,5 +1,6 @@
 const inquirer = require("inquirer");
 const connection = require("./include/db");
+const cTable = require("console.table");
 
 const queryAllEmployees = `SELECT e.id, concat(e.first_name, " ", e.last_name) AS name, r.title from employee e
 JOIN role r ON r.id = e.role_id`;
@@ -22,39 +23,54 @@ const init = {
 		"Add Role",
 		"Remove Role",
 		"Quit"
-	]
+	],
+	filter: function(val) {
+		return val.toLowerCase();
+	}
 };
 
 // populate roles list
 const getRoles = function() {
-	connection.query("SELECT id, title, salary FROM role", (err, res) => {
+	connection.query(queryAllRoles, (err, res) => {
 		if (err) throw err;
-		res.forEach(item => {
-			console.log(item);
+		const output = res.map(item => {
+			const newItem = {
+				id: item.id,
+				title: item.title,
+				salary: item.salary
+			};
+			return newItem;
 		});
+		console.log("\n");
+		console.table(output);
 	});
 };
 
-// if user selects view...
 const getEmployees = function() {
 	connection.query(queryAllEmployees, (err, res) => {
-		res.forEach(item => {
-			console.log(item);
+		if (err) throw err;
+		const output = res.map(item => {
+			const newItem = {
+				id: item.id,
+				name: item.name,
+				title: item.title
+			};
+			return newItem;
 		});
+		console.log("\n");
+		console.table(output);
 	});
 };
 
 const question1 = function() {
 	inquirer.prompt(init).then(answers => {
-		if ((answers.action = "View All Employees")) {
+		if (answers.action == "view all employees") {
 			getEmployees();
 			question1();
-		}
-		if ((answers.action = "View All Roles")) {
+		} else if (answers.action == "view all roles") {
 			getRoles();
 			question1();
-		}
-		if ((answers.action = "Quit")) {
+		} else if ((answers.action = "quit")) {
 			return 0;
 		}
 	});
