@@ -88,10 +88,24 @@ values
 -- update employee manager
 
 -- View All Employees
-SELECT e.id, concat(e.first_name, " ", e.last_name) AS name, r.title from employee e
-JOIN role r ON r.id = e.role_id;
+SELECT e.id, concat(e.first_name, " ", e.last_name) AS name, r.title, d.name as department, r.salary, e.manager_id as Manager
+FROM employee e
+JOIN role r ON r.id = e.role_id
+JOIN department d on d.id = r.department_id;
 
--- View all Employees by department
+-- View all Employees by department 
+-- First get list of departments to show:
+SELECT name from department;
+
+-- Then query for employees in the desired department (using department.id 1 here for testing)
+SELECT e.id, concat(e.first_name, " ", e.last_name) AS name, d.name as department
+FROM employee e
+JOIN role r on r.id = e.role_id
+JOIN department d ON d.id = r.department_id
+WHERE d.id = 1;
+
+
+
 -- view all employees by manager
 -- add employee
 -- remove employee
