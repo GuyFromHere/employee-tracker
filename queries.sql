@@ -42,15 +42,30 @@ values
 
 insert into employee ( first_name, last_name, role_id, manager_id )
 values 
-	("Ronald", "McDonald", 
+	("Mayor", "McCheese", 
         (select id from role where title = "Salesperson"),
-        (select manager_id from employee where id = (select id from employee
-			 where concat(first_name, " ", last_name) = "Adria Decker"));
+        (select id from  (SELECT * FROM employee) AS A 
+			where id = (select id from  (SELECT * FROM employee) AS A
+						where concat(first_name, " ", last_name) = "Adria Decker"
+                        )
+		)
+	);
 
-
+SELECT id, title, salary FROM role;SELECT DISTINCT e.manager_id AS ID, concat(m.first_name, " ", m.last_name) AS Name FROM employee e
+JOIN employee m ON e.manager_id = m.id;
 
 -- remove employee
+DELETE FROM employee WHERE concat(first_name, ' ', last_name) = "Little Bird";
+SELECT * FROM employee;
+select id from employee where concat(first_name, ' ', last_name) = "Little Bird";
+
 -- update employee role
+UPDATE employee 
+SET role_id = (SELECT id FROM (SELECT * FROM role) AS A 
+				WHERE title = "Salesperson") 
+WHERE id = (SELECT id from (SELECT * FROM employee) AS A 
+				WHERE concat(first_name, " ", last_name) = "Big Bird");
+select * from employee;
 
 -- update employee manager
 -- First show list of all employees

@@ -62,6 +62,12 @@ values
 
 const queryRemoveEmployee = `DELETE FROM employee WHERE concat(first_name, ' ', last_name) = ?`
 
+const queryUpdateEmployeeRole = `UPDATE employee 
+	SET role_id = (SELECT id FROM (SELECT * FROM role) AS A 
+					WHERE title = ?) 
+	WHERE id = (SELECT id from (SELECT * FROM employee) AS A 
+					WHERE concat(first_name, " ", last_name) = ?);`
+
 const queryUpdateManager = `UPDATE employee
 SET manager_id = (SELECT id FROM (SELECT * FROM employee) AS A
 				WHERE concat(first_name, " ", last_name) = ?) 
@@ -266,6 +272,47 @@ const removeEmployee = function () {
 }
 
 // 5: Update Employee Role
+const updateRole = function () {
+	// select employee to update then select the new role
+	connection.query(`${queryAllEmployeesSimple};${queryAllRoles};`, (err, res, fields) => {
+		if (err) throw err;
+		const employees = res[0].map(item => {
+			const newItem = {
+				id: item.id,
+				name: item.name
+			};
+			return newItem;
+		});
+		const roles = res[1].map(item => {
+			const newItem = {
+				id: item.id,
+				name: item.title
+			};
+			return newItem;
+		});
+		inquirer
+			.prompt([
+				{
+					type: "list",
+					name: "hasNewRole",
+					choices: employees,
+					message: "Which employee would you like to update?"
+				},
+				{
+					type: "list",
+					name: "newRole",
+					choices: roles,
+					message: "What is thier new role?"
+				}
+			]).then(answers => {
+				console.log(answers);
+				connection.query(queryUpdateEmployeeRole, [answers.newRole, answers.hasNewRole], (err, res, fields) => {
+					if (err) throw err;
+					getEmployees();
+				})
+			})
+	})
+};
 
 // 6: Update Employee Manager
 const updateManager = function () {
@@ -341,7 +388,7 @@ const showQuestions = function () {
 		} else if (answers.action == choices[4]) {
 			removeEmployee();
 		} else if (answers.action == choices[5]) {
-			console.log("You selected " + answers.action);
+			updateRole();
 		} else if (answers.action == choices[6]) {
 			updateManager();
 		} else if (answers.action == choices[7]) {
