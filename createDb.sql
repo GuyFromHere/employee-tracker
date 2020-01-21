@@ -74,54 +74,10 @@ insert into employee ( first_name, last_name, role_id)
 values 
 	("Sean", "Dismuke", 
         (select id from role where title = "Engineer")),
-	("Adria", "Decker",
-        (select id from role where title = "Salesperson"));
-        
--- SELECT * FROM department;
--- SELECT title, department_id, d.name FROM role r
--- inner join department d on r.department_id = d.id
--- show employees with title and manager
--- select e.id, concat(e.first_name, " ", e.last_name) as name, r.title, e.manager_id
--- from employee e 
--- join role r on e.;
+	("Zinnia", "Dismuke",
+        (select id from role where title = "Salesperson")),
+    ("Little", "Bird",
+        (select id from role where title = "Lawyer"));    
 
--- update employee manager
-
--- View All Employees
-SELECT e.id, concat(e.first_name, " ", e.last_name) AS name, r.title, d.name as department, r.salary, e.manager_id as Manager
-FROM employee e
-JOIN role r ON r.id = e.role_id
-JOIN department d on d.id = r.department_id;
-
--- View all Employees by department 
--- First get list of departments to show:
-SELECT name from department;
-
--- Then query for employees in the desired department (using department.id 1 here for testing)
-SELECT e.id, concat(e.first_name, " ", e.last_name) AS name, d.name as department
-FROM employee e
-JOIN role r on r.id = e.role_id
-JOIN department d ON d.id = r.department_id
-WHERE d.id = 1;
-
-
-
--- view all employees by manager
--- add employee
--- remove employee
--- update employee role
--- update employee manager
-
--- view all roles
-SELECT id, title, salary FROM role;
-
--- add role
-INSERT INTO role 
-(title, salary, department_id)
-VALUES 
-	("[TITLE]", "[SALARY]", 
-		(SELECT id FROM department 
-		WHERE department.name = "[DEPARTMENT NAME]")),
--- remove role
 
     

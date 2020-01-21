@@ -35,6 +35,12 @@ WHERE d.id = ?`;
 
 const queryManagerByName = `select id from employee where concat(first_name, " ", last_name) = ?`;
 
+const queryUpdateManager = `UPDATE employee
+SET manager_id = (SELECT id FROM (SELECT * FROM employee) AS A
+				WHERE concat(first_name, " ", last_name) = ?) 
+WHERE id = (SELECT id FROM (SELECT * FROM employee) AS A
+            WHERE concat(first_name, " ", last_name) = ?)`;
+
 const init = {
 	type: "list",
 	name: "action",
@@ -55,13 +61,15 @@ const getEmployees = function() {
 				name: item.name,
 				title: item.title,
 				department: item.department,
-				salary: item.salary
+				salary: item.salary,
+				manager: item.Manager
 			};
 			return newItem;
 		});
-		console.log("\n");
+		console.log("\n\n");
 		console.table(output);
-		console.log("\n\n\n\n\n");
+		console.log("\n\n");
+		showQuestions();
 	});
 };
 
@@ -97,9 +105,10 @@ const getEmployeesByDepartment = function() {
 							};
 							return newItem;
 						});
-						console.log("\n");
+						console.log("\n\n");
 						console.table(output);
-						console.log("\n\n\n\n\n");
+						console.log("\n\n");
+						showQuestions();
 					}
 				);
 			});
@@ -134,27 +143,23 @@ const updateManager = function() {
 					type: "list",
 					name: "newManager",
 					choices: output,
-					message: "Who is their manager?"
+					message: "Who is going to be the new manager?"
 				}
 			])
 			.then(answers => {
+				// answers contains the names of the new manager and the employee
+				// use these in the query to get and set the manager id.
 				connection.query(
-					// get id of selected manager...will be used for update query but I'm having inquirer issues.
-					queryManagerByName,
-					[answers.newManager],
+					queryUpdateManager,
+					[answers.newManager, answers.hasNewManager],
 					(err, res, fields) => {
 						if (err) throw err;
-						const output = res.map(item => {
-							const newItem = {
-								id: item.id
-							};
-							return newItem;
-						});
-						console.log("\n");
-						console.table(output);
-						console.log("\n\n\n\n\n");
+						// not really sure what gets returned from an update....
+						//console.log(res);
+						getEmployees();
 					}
 				);
+				//showQuestions();
 			});
 	});
 };
@@ -174,6 +179,7 @@ const getRoles = function() {
 		console.log("\n");
 		console.table(output);
 		console.log("\n\n\n\n\n");
+		showQuestions();
 	});
 };
 
@@ -203,9 +209,9 @@ const showQuestions = function() {
 		} else if (answers.action == choices[9].toLowerCase()) {
 			console.log("You selected " + answers.action);
 		} else if (answers.action == choices[10].toLowerCase()) {
-			return 0;
+			//return 0;
+			process.exit();
 		}
-		showQuestions();
 	});
 };
 
