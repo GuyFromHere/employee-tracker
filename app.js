@@ -16,10 +16,22 @@ const choices = [
 	"Quit"
 ];
 
-const queryAllEmployees = `SELECT e.id, concat(e.first_name, " ", e.last_name) AS name, r.title, d.name as department, r.salary, e.manager_id as Manager
+const queryAllEmployees = `SELECT e.id, concat(e.first_name, " ", e.last_name) AS name, r.title, d.name as department, r.salary, concat(m.first_name, " ", m.last_name) as Manager
 FROM employee e
 JOIN role r ON r.id = e.role_id
-JOIN department d on d.id = r.department_id`;
+JOIN department d ON d.id = r.department_id
+LEFT JOIN employee m ON e.manager_id = m.id;
+`;
+
+const queryAllEmployeesSimple = `SELECT id, concat(first_name, " ", last_name) AS name FROM employee`;
+
+const queryAllManagers = `SELECT DISTINCT e.manager_id AS ID, concat(m.first_name, " ", m.last_name) AS Name FROM employee e
+JOIN employee m ON e.manager_id = m.id `;
+
+const queryEmployeesByManager = `SELECT e.id AS ID, concat(e.first_name, " ", e.last_name) AS Name FROM employee e
+WHERE e.manager_id = (SELECT id FROM (SELECT * FROM employee) AS A
+				WHERE concat(first_name, " ", last_name) = ?)
+`;
 
 const queryAllRoles = `SELECT id, title, salary FROM role`;
 
@@ -31,6 +43,14 @@ JOIN role r on r.id = e.role_id
 JOIN department d ON d.id = r.department_id
 WHERE d.id = ?`;
 
+const queryManagerByName = `select id from employee where concat(first_name, " ", last_name) = ?`;
+
+const queryUpdateManager = `UPDATE employee
+SET manager_id = (SELECT id FROM (SELECT * FROM employee) AS A
+				WHERE concat(first_name, " ", last_name) = ?) 
+WHERE id = (SELECT id FROM (SELECT * FROM employee) AS A
+            WHERE concat(first_name, " ", last_name) = ?)`;
+
 const init = {
 	type: "list",
 	name: "action",
@@ -41,24 +61,7 @@ const init = {
 	}
 };
 
-// populate roles list
-const getRoles = function() {
-	connection.query(queryAllRoles, (err, res) => {
-		if (err) throw err;
-		const output = res.map(item => {
-			const newItem = {
-				id: item.id,
-				title: item.title,
-				salary: item.salary
-			};
-			return newItem;
-		});
-		console.log("\n");
-		console.table(output);
-		console.log("\n\n\n\n\n");
-	});
-};
-
+// 0: View All Employees
 const getEmployees = function() {
 	connection.query(queryAllEmployees, (err, res) => {
 		if (err) throw err;
@@ -68,23 +71,23 @@ const getEmployees = function() {
 				name: item.name,
 				title: item.title,
 				department: item.department,
-				salary: item.salary
+				salary: item.salary,
+				manager: item.Manager
 			};
 			return newItem;
 		});
-		console.log("\n");
 		console.table(output);
-		console.log("\n\n\n\n\n");
+		showQuestions();
 	});
 };
 
+// 1: View All Employees By Department
 const getEmployeesByDepartment = function() {
 	connection.query(queryAllDepartments, (err, res, fields) => {
 		if (err) throw err;
 		const output = res.map(item => {
 			return item.name;
 		});
-		console.log(output);
 		inquirer
 			.prompt({
 				type: "list",
@@ -110,49 +113,147 @@ const getEmployeesByDepartment = function() {
 							};
 							return newItem;
 						});
-						console.log("\n");
 						console.table(output);
-						console.log("\n\n\n\n\n");
+						showQuestions();
 					}
 				);
 			});
 	});
 };
 
+// 2: View All Employees By Manager
+const getEmployeesByManager = function() {
+	connection.query(queryAllManagers, (err, res, fields) => {
+		if (err) throw err;
+		const output = res.map(item => {
+			const newItem = {
+				id: item.ID,
+				name: item.Name
+			};
+			return newItem;
+		});
+		inquirer
+			.prompt([
+				{
+					type: "list",
+					name: "manager",
+					choices: output,
+					message: "Which manager do you want to view?"
+				}
+			])
+			.then(manager => {
+				console.log(manager);
+				connection.query(
+					queryEmployeesByManager,
+					[manager.manager],
+					(err, res, fields) => {
+						if (err) throw err;
+						const output = res.map(item => {
+							const newItem = {
+								id: item.ID,
+								name: item.Name
+							};
+							return newItem;
+						});
+						console.table(output);
+						showQuestions();
+					}
+				);
+			});
+	});
+};
+
+// 3: Add Employee
+// 4: Remove Employee
+// 5: Update Employee Role
+
+// 6: Update Employee Manager
+const updateManager = function() {
+	connection.query(queryAllEmployeesSimple, (err, res, fields) => {
+		if (err) throw err;
+		const output = res.map(item => {
+			const newItem = {
+				id: item.id,
+				name: item.name
+			};
+			return newItem;
+		});
+		inquirer
+			.prompt([
+				{
+					type: "list",
+					name: "hasNewManager",
+					choices: output,
+					message: "Which employee has a new manager?"
+				},
+				{
+					type: "list",
+					name: "newManager",
+					choices: output,
+					message: "Who is going to be the new manager?"
+				}
+			])
+			.then(answers => {
+				// answers contains the names of the new manager and the employee
+				// use these in the query to get and set the manager id.
+				connection.query(
+					queryUpdateManager,
+					[answers.newManager, answers.hasNewManager],
+					(err, res, fields) => {
+						if (err) throw err;
+						getEmployees();
+					}
+				);
+				//showQuestions();
+			});
+	});
+};
+
+// 7: View All Roles
+const getRoles = function() {
+	connection.query(queryAllRoles, (err, res) => {
+		if (err) throw err;
+		const output = res.map(item => {
+			const newItem = {
+				id: item.id,
+				title: item.title,
+				salary: item.salary
+			};
+			return newItem;
+		});
+		console.table(output);
+		showQuestions();
+	});
+};
+
+// 8: Add Role
+// 9: Remove Role
+
 const showQuestions = function() {
 	inquirer.prompt(init).then(answers => {
 		if (answers.action == choices[0].toLowerCase()) {
 			getEmployees();
-			showQuestions();
 		} else if (answers.action == choices[1].toLowerCase()) {
 			getEmployeesByDepartment();
-			showQuestions();
 		} else if (answers.action == choices[2].toLowerCase()) {
-			console.log("You selected " + answers.action);
-			showQuestions();
+			getEmployeesByManager();
 		} else if (answers.action == choices[3].toLowerCase()) {
 			console.log("You selected " + answers.action);
-			showQuestions();
 		} else if (answers.action == choices[4].toLowerCase()) {
 			console.log("You selected " + answers.action);
-			showQuestions();
 		} else if (answers.action == choices[5].toLowerCase()) {
 			console.log("You selected " + answers.action);
-			showQuestions();
 		} else if (answers.action == choices[6].toLowerCase()) {
-			console.log("You selected " + answers.action);
-			showQuestions();
+			updateManager();
 		} else if (answers.action == choices[7].toLowerCase()) {
 			getRoles();
-			showQuestions();
 		} else if (answers.action == choices[8].toLowerCase()) {
 			console.log("You selected " + answers.action);
-			showQuestions();
 		} else if (answers.action == choices[9].toLowerCase()) {
 			console.log("You selected " + answers.action);
-			showQuestions();
 		} else if (answers.action == choices[10].toLowerCase()) {
-			return 0;
+			//return 0;
+			process.exit();
 		}
 	});
 };

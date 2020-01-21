@@ -16,12 +16,22 @@ const choices = [
 	"Quit"
 ];
 
-const queryAllEmployees = `SELECT e.id, concat(e.first_name, " ", e.last_name) AS name, r.title, d.name as department, r.salary, e.manager_id as Manager
+const queryAllEmployees = `SELECT e.id, concat(e.first_name, " ", e.last_name) AS name, r.title, d.name as department, r.salary, concat(m.first_name, " ", m.last_name) as Manager
 FROM employee e
 JOIN role r ON r.id = e.role_id
-JOIN department d on d.id = r.department_id`;
+JOIN department d ON d.id = r.department_id
+LEFT JOIN employee m ON e.manager_id = m.id;
+`;
 
 const queryAllEmployeesSimple = `SELECT id, concat(first_name, " ", last_name) AS name FROM employee`;
+
+const queryAllManagers = `SELECT DISTINCT e.manager_id AS ID, concat(m.first_name, " ", m.last_name) AS Name FROM employee e
+JOIN employee m ON e.manager_id = m.id `;
+
+const queryEmployeesByManager = `SELECT e.id AS ID, concat(e.first_name, " ", e.last_name) AS Name FROM employee e
+WHERE e.manager_id = (SELECT id FROM (SELECT * FROM employee) AS A
+				WHERE concat(first_name, " ", last_name) = ?)
+`;
 
 const queryAllRoles = `SELECT id, title, salary FROM role`;
 
@@ -66,9 +76,7 @@ const getEmployees = function() {
 			};
 			return newItem;
 		});
-		console.log("\n\n");
 		console.table(output);
-		console.log("\n\n");
 		showQuestions();
 	});
 };
@@ -105,9 +113,7 @@ const getEmployeesByDepartment = function() {
 							};
 							return newItem;
 						});
-						console.log("\n\n");
 						console.table(output);
-						console.log("\n\n");
 						showQuestions();
 					}
 				);
@@ -116,6 +122,47 @@ const getEmployeesByDepartment = function() {
 };
 
 // 2: View All Employees By Manager
+const getEmployeesByManager = function() {
+	connection.query(queryAllManagers, (err, res, fields) => {
+		if (err) throw err;
+		const output = res.map(item => {
+			const newItem = {
+				id: item.ID,
+				name: item.Name
+			};
+			return newItem;
+		});
+		inquirer
+			.prompt([
+				{
+					type: "list",
+					name: "manager",
+					choices: output,
+					message: "Which manager do you want to view?"
+				}
+			])
+			.then(manager => {
+				console.log(manager);
+				connection.query(
+					queryEmployeesByManager,
+					[manager.manager],
+					(err, res, fields) => {
+						if (err) throw err;
+						const output = res.map(item => {
+							const newItem = {
+								id: item.ID,
+								name: item.Name
+							};
+							return newItem;
+						});
+						console.table(output);
+						showQuestions();
+					}
+				);
+			});
+	});
+};
+
 // 3: Add Employee
 // 4: Remove Employee
 // 5: Update Employee Role
@@ -154,8 +201,6 @@ const updateManager = function() {
 					[answers.newManager, answers.hasNewManager],
 					(err, res, fields) => {
 						if (err) throw err;
-						// not really sure what gets returned from an update....
-						//console.log(res);
 						getEmployees();
 					}
 				);
@@ -176,9 +221,7 @@ const getRoles = function() {
 			};
 			return newItem;
 		});
-		console.log("\n");
 		console.table(output);
-		console.log("\n\n\n\n\n");
 		showQuestions();
 	});
 };
@@ -193,7 +236,7 @@ const showQuestions = function() {
 		} else if (answers.action == choices[1].toLowerCase()) {
 			getEmployeesByDepartment();
 		} else if (answers.action == choices[2].toLowerCase()) {
-			console.log("You selected " + answers.action);
+			getEmployeesByManager();
 		} else if (answers.action == choices[3].toLowerCase()) {
 			console.log("You selected " + answers.action);
 		} else if (answers.action == choices[4].toLowerCase()) {
