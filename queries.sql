@@ -6,11 +6,12 @@
 -- from employee e 
 -- join role r on e.;
 
--- View All Employees
-SELECT e.id, concat(e.first_name, " ", e.last_name) AS name, r.title, d.name as department, r.salary, e.manager_id as Manager
+-- View All Employees and managers
+SELECT e.id, concat(e.first_name, " ", e.last_name) AS name, r.title, d.name as department, r.salary, concat(m.first_name, " ", m.last_name) as Manager
 FROM employee e
 JOIN role r ON r.id = e.role_id
-JOIN department d on d.id = r.department_id;
+JOIN department d ON d.id = r.department_id
+LEFT JOIN employee m ON e.manager_id = m.id;
 
 -- View all Employees by department 
 -- First get list of departments to show:
@@ -25,8 +26,22 @@ WHERE d.id = 1;
 
 
 
--- view all employees by manager
+-- view all managers
+SELECT DISTINCT e.manager_id AS ID, concat(m.first_name, " ", m.last_name) AS Name FROM employee e
+JOIN employee m ON e.manager_id = m.id; 
+
+-- view all employees of a manager
+SELECT e.id AS ID, concat(e.first_name, " ", e.last_name) AS Name FROM employee e
+WHERE e.manager_id = (SELECT id FROM (SELECT * FROM employee) AS A
+				WHERE concat(first_name, " ", last_name) = 'Dan Dismuke');
+                
 -- add employee
+SELECT id, title FROM role;
+insert into employee ( first_name, last_name, role_id )
+values 
+	("Ronald", "McDonald", 
+        (select id from role where title = "Salesperson"));
+
 -- remove employee
 -- update employee role
 
