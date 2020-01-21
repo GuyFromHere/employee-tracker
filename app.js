@@ -35,6 +35,8 @@ WHERE e.manager_id = (SELECT id FROM (SELECT * FROM employee) AS A
 
 const queryAllRoles = `SELECT id, title, salary FROM role`;
 
+const queryRoleSimple = `SELECT id, title FROM role`;
+
 const queryAllDepartments = `SELECT name FROM department`;
 
 const queryEmployeesByDept = `SELECT e.id, concat(e.first_name, " ", e.last_name) AS name, d.name as department
@@ -44,6 +46,10 @@ JOIN department d ON d.id = r.department_id
 WHERE d.id = ?`;
 
 const queryManagerByName = `select id from employee where concat(first_name, " ", last_name) = ?`;
+
+const queryAddNewEmployee = `insert into employee ( first_name, last_name, role_id )
+values 
+	(?, ?, (select id from role where title = ?))`;
 
 const queryUpdateManager = `UPDATE employee
 SET manager_id = (SELECT id FROM (SELECT * FROM employee) AS A
@@ -55,10 +61,7 @@ const init = {
 	type: "list",
 	name: "action",
 	message: "What would you like to do?",
-	choices: choices,
-	filter: function(val) {
-		return val.toLowerCase();
-	}
+	choices: choices
 };
 
 // 0: View All Employees
@@ -164,6 +167,52 @@ const getEmployeesByManager = function() {
 };
 
 // 3: Add Employee
+const addEmployee = function() {
+	connection.query(queryRoleSimple, (err, res, fields) => {
+		if (err) throw err;
+		const output = res.map(item => {
+			const newItem = {
+				name: item.title
+			};
+			return newItem;
+		});
+		console.log(output);
+		inquirer
+			.prompt([
+				{
+					type: "input",
+					name: "firstName",
+					message: "What is the employees first name?"
+				},
+				{
+					type: "input",
+					name: "lastName",
+					message: "What is the employees last name?"
+				},
+				{
+					type: "list",
+					name: "role",
+					choices: output,
+					message: "What is the employee's role?"
+				}
+			])
+			.then(newEmployee => {
+				connection.query(
+					queryAddNewEmployee,
+					[
+						newEmployee.firstName,
+						newEmployee.lastName,
+						newEmployee.role
+					],
+					(err, res, fields) => {
+						if (err) throw err;
+						getEmployees();
+					}
+				);
+			});
+	});
+};
+
 // 4: Remove Employee
 // 5: Update Employee Role
 
@@ -204,7 +253,6 @@ const updateManager = function() {
 						getEmployees();
 					}
 				);
-				//showQuestions();
 			});
 	});
 };
@@ -231,27 +279,27 @@ const getRoles = function() {
 
 const showQuestions = function() {
 	inquirer.prompt(init).then(answers => {
-		if (answers.action == choices[0].toLowerCase()) {
+		if (answers.action == choices[0]) {
 			getEmployees();
-		} else if (answers.action == choices[1].toLowerCase()) {
+		} else if (answers.action == choices[1]) {
 			getEmployeesByDepartment();
-		} else if (answers.action == choices[2].toLowerCase()) {
+		} else if (answers.action == choices[2]) {
 			getEmployeesByManager();
-		} else if (answers.action == choices[3].toLowerCase()) {
+		} else if (answers.action == choices[3]) {
+			addEmployee();
+		} else if (answers.action == choices[4]) {
 			console.log("You selected " + answers.action);
-		} else if (answers.action == choices[4].toLowerCase()) {
+		} else if (answers.action == choices[5]) {
 			console.log("You selected " + answers.action);
-		} else if (answers.action == choices[5].toLowerCase()) {
-			console.log("You selected " + answers.action);
-		} else if (answers.action == choices[6].toLowerCase()) {
+		} else if (answers.action == choices[6]) {
 			updateManager();
-		} else if (answers.action == choices[7].toLowerCase()) {
+		} else if (answers.action == choices[7]) {
 			getRoles();
-		} else if (answers.action == choices[8].toLowerCase()) {
+		} else if (answers.action == choices[8]) {
 			console.log("You selected " + answers.action);
-		} else if (answers.action == choices[9].toLowerCase()) {
+		} else if (answers.action == choices[9]) {
 			console.log("You selected " + answers.action);
-		} else if (answers.action == choices[10].toLowerCase()) {
+		} else if (answers.action == choices[10]) {
 			//return 0;
 			process.exit();
 		}
