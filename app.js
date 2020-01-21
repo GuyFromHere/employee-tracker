@@ -35,21 +35,36 @@ WHERE e.manager_id = (SELECT id FROM (SELECT * FROM employee) AS A
 
 const queryAllRoles = `SELECT id, title, salary FROM role`;
 
+const queryRolesAndManagers = `SELECT id, title, salary FROM role;
+								SELECT DISTINCT e.manager_id AS id, concat(m.first_name, " ", m.last_name) AS name 
+								FROM employee e
+								JOIN employee m ON e.manager_id = m.id;`
+
 const queryRoleSimple = `SELECT id, title FROM role`;
 
 const queryAllDepartments = `SELECT name FROM department`;
 
 const queryEmployeesByDept = `SELECT e.id, concat(e.first_name, " ", e.last_name) AS name, d.name as department
-FROM employee e
-JOIN role r on r.id = e.role_id
-JOIN department d ON d.id = r.department_id
-WHERE d.id = ?`;
+							FROM employee e
+							JOIN role r on r.id = e.role_id
+							JOIN department d ON d.id = r.department_id
+							WHERE d.id = ?`;
 
 const queryManagerByName = `select id from employee where concat(first_name, " ", last_name) = ?`;
 
 const queryAddNewEmployee = `insert into employee ( first_name, last_name, role_id )
 values 
 	(?, ?, (select id from role where title = ?))`;
+
+const queryAddNewEmployeeWithManager = `insert into employee ( first_name, last_name, role_id, manager_id )
+values 
+	(?, ?, (select id from role where title = ?),
+        (select id from  (SELECT * FROM employee) AS A 
+			where id = (select id from  (SELECT * FROM employee) AS A
+						where concat(first_name, " ", last_name) = ?
+                        )
+		)
+	);`
 
 const queryUpdateManager = `UPDATE employee
 SET manager_id = (SELECT id FROM (SELECT * FROM employee) AS A
@@ -65,7 +80,7 @@ const init = {
 };
 
 // 0: View All Employees
-const getEmployees = function() {
+const getEmployees = function () {
 	connection.query(queryAllEmployees, (err, res) => {
 		if (err) throw err;
 		const output = res.map(item => {
@@ -85,7 +100,7 @@ const getEmployees = function() {
 };
 
 // 1: View All Employees By Department
-const getEmployeesByDepartment = function() {
+const getEmployeesByDepartment = function () {
 	connection.query(queryAllDepartments, (err, res, fields) => {
 		if (err) throw err;
 		const output = res.map(item => {
@@ -97,7 +112,7 @@ const getEmployeesByDepartment = function() {
 				name: "department",
 				choices: output,
 				message: "Which department do you want to check?",
-				filter: function(val) {
+				filter: function (val) {
 					const departmentId = output.indexOf(val) + 1;
 					return departmentId;
 				}
@@ -125,7 +140,7 @@ const getEmployeesByDepartment = function() {
 };
 
 // 2: View All Employees By Manager
-const getEmployeesByManager = function() {
+const getEmployeesByManager = function () {
 	connection.query(queryAllManagers, (err, res, fields) => {
 		if (err) throw err;
 		const output = res.map(item => {
@@ -154,7 +169,7 @@ const getEmployeesByManager = function() {
 						const output = res.map(item => {
 							const newItem = {
 								id: item.ID,
-								name: item.Name
+								name: item.name
 							};
 							return newItem;
 						});
@@ -167,16 +182,21 @@ const getEmployeesByManager = function() {
 };
 
 // 3: Add Employee
-const addEmployee = function() {
-	connection.query(queryRoleSimple, (err, res, fields) => {
+const addEmployee = function () {
+	connection.query(queryRolesAndManagers, (err, res, fields) => {
 		if (err) throw err;
-		const output = res.map(item => {
+		const roles = res[0].map(item => {
 			const newItem = {
 				name: item.title
 			};
 			return newItem;
 		});
-		console.log(output);
+		const managers = res[1].map(item => {
+			const newItem = {
+				name: item.name
+			}
+			return newItem;
+		})
 		inquirer
 			.prompt([
 				{
@@ -192,17 +212,25 @@ const addEmployee = function() {
 				{
 					type: "list",
 					name: "role",
-					choices: output,
+					choices: roles,
 					message: "What is the employee's role?"
+				},
+				{
+					type: "list",
+					name: "newManager",
+					choices: managers,
+					message: "Who is the employee's manager?"
 				}
 			])
 			.then(newEmployee => {
+				console.log(newEmployee)
 				connection.query(
-					queryAddNewEmployee,
+					queryAddNewEmployeeWithManager,
 					[
 						newEmployee.firstName,
 						newEmployee.lastName,
-						newEmployee.role
+						newEmployee.role,
+						newEmployee.newManager
 					],
 					(err, res, fields) => {
 						if (err) throw err;
@@ -217,7 +245,7 @@ const addEmployee = function() {
 // 5: Update Employee Role
 
 // 6: Update Employee Manager
-const updateManager = function() {
+const updateManager = function () {
 	connection.query(queryAllEmployeesSimple, (err, res, fields) => {
 		if (err) throw err;
 		const output = res.map(item => {
@@ -258,7 +286,7 @@ const updateManager = function() {
 };
 
 // 7: View All Roles
-const getRoles = function() {
+const getRoles = function () {
 	connection.query(queryAllRoles, (err, res) => {
 		if (err) throw err;
 		const output = res.map(item => {
@@ -277,7 +305,7 @@ const getRoles = function() {
 // 8: Add Role
 // 9: Remove Role
 
-const showQuestions = function() {
+const showQuestions = function () {
 	inquirer.prompt(init).then(answers => {
 		if (answers.action == choices[0]) {
 			getEmployees();

@@ -24,8 +24,6 @@ JOIN role r on r.id = e.role_id
 JOIN department d ON d.id = r.department_id
 WHERE d.id = 1;
 
-
-
 -- view all managers
 SELECT DISTINCT e.manager_id AS ID, concat(m.first_name, " ", m.last_name) AS Name FROM employee e
 JOIN employee m ON e.manager_id = m.id; 
@@ -36,11 +34,20 @@ WHERE e.manager_id = (SELECT id FROM (SELECT * FROM employee) AS A
 				WHERE concat(first_name, " ", last_name) = 'Dan Dismuke');
                 
 -- add employee
-SELECT id, title FROM role;
+-- TODO: Add manager by name
 insert into employee ( first_name, last_name, role_id )
 values 
 	("Ronald", "McDonald", 
         (select id from role where title = "Salesperson"));
+
+insert into employee ( first_name, last_name, role_id, manager_id )
+values 
+	("Ronald", "McDonald", 
+        (select id from role where title = "Salesperson"),
+        (select manager_id from employee where id = (select id from employee
+			 where concat(first_name, " ", last_name) = "Adria Decker"));
+
+
 
 -- remove employee
 -- update employee role
