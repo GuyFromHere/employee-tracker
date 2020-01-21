@@ -50,13 +50,7 @@ const queryEmployeesByDept = `SELECT e.id, concat(e.first_name, " ", e.last_name
 							JOIN department d ON d.id = r.department_id
 							WHERE d.id = ?`;
 
-const queryManagerByName = `select id from employee where concat(first_name, " ", last_name) = ?`;
-
-const queryAddNewEmployee = `insert into employee ( first_name, last_name, role_id )
-values 
-	(?, ?, (select id from role where title = ?))`;
-
-const queryAddNewEmployeeWithManager = `insert into employee ( first_name, last_name, role_id, manager_id )
+const queryAddNewEmployee = `insert into employee ( first_name, last_name, role_id, manager_id )
 values 
 	(?, ?, (select id from role where title = ?),
         (select id from  (SELECT * FROM employee) AS A 
@@ -65,6 +59,8 @@ values
                         )
 		)
 	);`
+
+const queryRemoveEmployee = `DELETE FROM employee WHERE concat(first_name, ' ', last_name) = ?`
 
 const queryUpdateManager = `UPDATE employee
 SET manager_id = (SELECT id FROM (SELECT * FROM employee) AS A
@@ -160,7 +156,6 @@ const getEmployeesByManager = function () {
 				}
 			])
 			.then(manager => {
-				console.log(manager);
 				connection.query(
 					queryEmployeesByManager,
 					[manager.manager],
@@ -169,7 +164,7 @@ const getEmployeesByManager = function () {
 						const output = res.map(item => {
 							const newItem = {
 								id: item.ID,
-								name: item.name
+								name: item.Name
 							};
 							return newItem;
 						});
@@ -185,18 +180,23 @@ const getEmployeesByManager = function () {
 const addEmployee = function () {
 	connection.query(queryRolesAndManagers, (err, res, fields) => {
 		if (err) throw err;
+		// multi-query returns results to both queries in an array
+		// get roles from first index
 		const roles = res[0].map(item => {
 			const newItem = {
 				name: item.title
 			};
 			return newItem;
 		});
+		// get managers from second index
 		const managers = res[1].map(item => {
 			const newItem = {
 				name: item.name
 			}
 			return newItem;
 		})
+		// Add a 'None' option if the employee is not to have a manager
+		managers.push({ name: "None" });
 		inquirer
 			.prompt([
 				{
@@ -223,9 +223,8 @@ const addEmployee = function () {
 				}
 			])
 			.then(newEmployee => {
-				console.log(newEmployee)
 				connection.query(
-					queryAddNewEmployeeWithManager,
+					queryAddNewEmployee,
 					[
 						newEmployee.firstName,
 						newEmployee.lastName,
@@ -242,6 +241,30 @@ const addEmployee = function () {
 };
 
 // 4: Remove Employee
+const removeEmployee = function () {
+	connection.query(queryAllEmployeesSimple, (err, res, fields) => {
+		if (err) throw err;
+		const output = res.map(item => {
+			const newItem = {
+				name: item.name
+			}
+			return newItem;
+		})
+		inquirer.prompt([{
+			type: "list",
+			name: "employee",
+			choices: output,
+			message: "Which employee would you like to remove?"
+		}]).then(employee => {
+			connection.query(queryRemoveEmployee, [employee.employee], (err, res, fields) => {
+				if (err) throw err;
+				console.log('Successfully removed employee ' + employee.employee)
+				getEmployees();
+			})
+		})
+	})
+}
+
 // 5: Update Employee Role
 
 // 6: Update Employee Manager
@@ -316,7 +339,7 @@ const showQuestions = function () {
 		} else if (answers.action == choices[3]) {
 			addEmployee();
 		} else if (answers.action == choices[4]) {
-			console.log("You selected " + answers.action);
+			removeEmployee();
 		} else if (answers.action == choices[5]) {
 			console.log("You selected " + answers.action);
 		} else if (answers.action == choices[6]) {
