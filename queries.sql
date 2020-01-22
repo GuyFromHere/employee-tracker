@@ -34,38 +34,22 @@ WHERE e.manager_id = (SELECT id FROM (SELECT * FROM employee) AS A
 				WHERE concat(first_name, " ", last_name) = 'Dan Dismuke');
                 
 -- add employee
--- TODO: Add manager by name
+SELECT id, title FROM role;
 insert into employee ( first_name, last_name, role_id )
 values 
 	("Ronald", "McDonald", 
         (select id from role where title = "Salesperson"));
 
-insert into employee ( first_name, last_name, role_id, manager_id )
-values 
-	("Mayor", "McCheese", 
-        (select id from role where title = "Salesperson"),
-        (select id from  (SELECT * FROM employee) AS A 
-			where id = (select id from  (SELECT * FROM employee) AS A
-						where concat(first_name, " ", last_name) = "Adria Decker"
-                        )
-		)
-	);
-
-SELECT id, title, salary FROM role;SELECT DISTINCT e.manager_id AS ID, concat(m.first_name, " ", m.last_name) AS Name FROM employee e
-JOIN employee m ON e.manager_id = m.id;
-
 -- remove employee
-DELETE FROM employee WHERE concat(first_name, ' ', last_name) = "Little Bird";
-SELECT * FROM employee;
-select id from employee where concat(first_name, ' ', last_name) = "Little Bird";
+DELETE FROM employee 
+WHERE concat(first_name, ' ', last_name) = ?;
 
 -- update employee role
 UPDATE employee 
-SET role_id = (SELECT id FROM (SELECT * FROM role) AS A 
-				WHERE title = "Salesperson") 
-WHERE id = (SELECT id from (SELECT * FROM employee) AS A 
-				WHERE concat(first_name, " ", last_name) = "Big Bird");
-select * from employee;
+	SET role_id = (SELECT id FROM (SELECT * FROM role) AS A 
+					WHERE title = ?) 
+	WHERE id = (SELECT id from (SELECT * FROM employee) AS A 
+					WHERE concat(first_name, " ", last_name) = ?);
 
 -- update employee manager
 -- First show list of all employees
@@ -83,13 +67,12 @@ select * from employee;
 SELECT id, title, salary FROM role;
 
 -- add role
-SELECT name FROM department;
-
 INSERT INTO role 
 (title, salary, department_id)
 VALUES 
-	("Fart Maker", "1000000.00", 
+	("[TITLE]", "[SALARY]", 
 		(SELECT id FROM department 
-		WHERE department.name = "Finance"));
-SELECT * FROM role;
+		WHERE department.name = "[DEPARTMENT NAME]"));
 -- remove role
+DELETE FROM role
+WHERE title = ?;

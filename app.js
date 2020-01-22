@@ -25,22 +25,16 @@ LEFT JOIN employee m ON e.manager_id = m.id;
 
 const queryAllEmployeesSimple = `SELECT id, concat(first_name, " ", last_name) AS name FROM employee`;
 
-const queryAllManagers = `SELECT DISTINCT e.manager_id AS ID, concat(m.first_name, " ", m.last_name) AS Name FROM employee e
-JOIN employee m ON e.manager_id = m.id `;
+const queryAllManagers = `SELECT DISTINCT e.manager_id AS ID, concat(m.first_name, " ", m.last_name) AS name 
+                        FROM employee e
+                        JOIN employee m ON e.manager_id = m.id;`;
 
 const queryEmployeesByManager = `SELECT e.id AS ID, concat(e.first_name, " ", e.last_name) AS Name FROM employee e
 WHERE e.manager_id = (SELECT id FROM (SELECT * FROM employee) AS A
 				WHERE concat(first_name, " ", last_name) = ?)
 `;
 
-const queryAllRoles = `SELECT id, title, salary FROM role`;
-
-const queryRolesAndManagers = `SELECT id, title, salary FROM role;
-								SELECT DISTINCT e.manager_id AS id, concat(m.first_name, " ", m.last_name) AS name 
-								FROM employee e
-								JOIN employee m ON e.manager_id = m.id;`
-
-const queryRoleSimple = `SELECT id, title FROM role`;
+const queryAllRoles = `SELECT id, title, salary FROM role;`;
 
 const queryAllDepartments = `SELECT name FROM department`;
 
@@ -80,6 +74,9 @@ VALUES
 	(?, ?, 
 		(SELECT id FROM department 
 		WHERE department.name = ?));`
+
+const queryRemoveRole = `DELETE FROM role
+                        WHERE title = ?;`
 
 const init = {
 	type: "list",
@@ -191,7 +188,7 @@ const getEmployeesByManager = function () {
 
 // 3: Add Employee
 const addEmployee = function () {
-	connection.query(queryRolesAndManagers, (err, res, fields) => {
+	connection.query(`${queryAllRoles}${queryAllManagers}`, (err, res, fields) => {
 		if (err) throw err;
 		// multi-query returns results to both queries in an array
 		// get roles from first index
@@ -419,6 +416,31 @@ const addRole = function () {
 
 
 // 9: Remove Role
+const deleteRole = function() {
+    connection.query(queryAllRoles, (err, res, fields) => {
+        if (err) throw err;
+        const output = res.map(item => {
+            const newItem = {
+                name: item.title
+            };
+            return newItem;
+        });
+        inquirer.prompt([
+            {
+                type: "list",
+                name: "roles",
+                choices: output,
+                message: "What role do you want to remove?"
+            }
+        ]).then(answers => {
+            connection.query(queryRemoveRole, [answers.roles], (err, res, fields) => {
+                if (err) throw err;
+                console.log('Successfully removed role ' + answers.roles);
+                showQuestions();
+            })
+        })
+    })
+}
 
 const showQuestions = function () {
 	inquirer.prompt(init).then(answers => {
@@ -441,7 +463,7 @@ const showQuestions = function () {
 		} else if (answers.action == choices[8]) {
 			addRole();
 		} else if (answers.action == choices[9]) {
-			console.log("You selected " + answers.action);
+			deleteRole();
 		} else if (answers.action == choices[10]) {
 			//return 0;
 			process.exit();
