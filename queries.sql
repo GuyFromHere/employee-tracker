@@ -83,10 +83,13 @@ select * from employee;
 SELECT id, title, salary FROM role;
 
 -- add role
+SELECT name FROM department;
+
 INSERT INTO role 
 (title, salary, department_id)
 VALUES 
-	("[TITLE]", "[SALARY]", 
+	("Fart Maker", "1000000.00", 
 		(SELECT id FROM department 
-		WHERE department.name = "[DEPARTMENT NAME]")),
+		WHERE department.name = "Finance"));
+SELECT * FROM role;
 -- remove role

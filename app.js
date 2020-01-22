@@ -74,6 +74,13 @@ SET manager_id = (SELECT id FROM (SELECT * FROM employee) AS A
 WHERE id = (SELECT id FROM (SELECT * FROM employee) AS A
             WHERE concat(first_name, " ", last_name) = ?)`;
 
+const queryAddRole = `INSERT INTO role 
+(title, salary, department_id)
+VALUES 
+	(?, ?, 
+		(SELECT id FROM department 
+		WHERE department.name = ?));`
+
 const init = {
 	type: "list",
 	name: "action",
@@ -373,6 +380,44 @@ const getRoles = function () {
 };
 
 // 8: Add Role
+// get title, salary, department_id (from department) of new role.
+const addRole = function () {
+	connection.query(queryAllDepartments, (err, res, fields) => {
+		if (err) throw err;
+		const departments = res.map(item => {
+			const newItem = {
+				name: item.name
+			};
+			return newItem;
+		});
+		inquirer.prompt([
+			{
+				type: "list",
+				name: "department",
+				choices: departments,
+				message: "What department does this role belong in?"
+			},
+			{
+				type: "input",
+				name: "newRole",
+				message: "What is the name of the new role?"
+			},
+			{
+				type: "input",
+				name: "salary",
+				message: "What is the starting salary?"
+			}
+		]).then(answers => {
+			connection.query(queryAddRole, [answers.newRole, answers.salary, answers.department], (err, res, fields) => {
+				if (err) throw err;
+				console.log('Successfully added the ' + answers.newRole + ' role.')
+				showQuestions();
+			})
+		})
+	})
+}
+
+
 // 9: Remove Role
 
 const showQuestions = function () {
@@ -394,7 +439,7 @@ const showQuestions = function () {
 		} else if (answers.action == choices[7]) {
 			getRoles();
 		} else if (answers.action == choices[8]) {
-			console.log("You selected " + answers.action);
+			addRole();
 		} else if (answers.action == choices[9]) {
 			console.log("You selected " + answers.action);
 		} else if (answers.action == choices[10]) {
