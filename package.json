@@ -1,24 +1,24 @@
 {
-  "name": "employee-tracker",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "nodemon node index.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/GuyFromHere/employee-tracker.git"
-  },
-  "author": "Dan Dismuke",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/GuyFromHere/employee-tracker/issues"
-  },
-  "homepage": "https://github.com/GuyFromHere/employee-tracker#readme",
-  "dependencies": {
-    "console.table": "^0.10.0",
-    "inquirer": "^7.0.3",
-    "mysql": "^2.17.1"
-  }
+	"name": "employee-tracker",
+	"version": "1.0.0",
+	"description": "",
+	"main": "app.js",
+	"scripts": {
+		"start": "node app.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/GuyFromHere/employee-tracker.git"
+	},
+	"author": "Dan Dismuke",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/GuyFromHere/employee-tracker/issues"
+	},
+	"homepage": "https://github.com/GuyFromHere/employee-tracker#readme",
+	"dependencies": {
+		"console.table": "^0.10.0",
+		"inquirer": "^7.0.3",
+		"mysql": "^2.17.1"
+	}
 }

@@ -1,6 +1,7 @@
 const inquirer = require("inquirer");
 const connection = require("./include/db");
 const cTable = require("console.table");
+const queries = require("./include/queries.js");
 
 const choices = [
 	"View All Employees",
@@ -16,68 +17,6 @@ const choices = [
 	"Quit"
 ];
 
-const queryAllEmployees = `SELECT e.id, concat(e.first_name, " ", e.last_name) AS name, r.title, d.name as department, r.salary, concat(m.first_name, " ", m.last_name) as Manager
-FROM employee e
-JOIN role r ON r.id = e.role_id
-JOIN department d ON d.id = r.department_id
-LEFT JOIN employee m ON e.manager_id = m.id;
-`;
-
-const queryAllEmployeesSimple = `SELECT id, concat(first_name, " ", last_name) AS name FROM employee`;
-
-const queryAllManagers = `SELECT DISTINCT e.manager_id AS ID, concat(m.first_name, " ", m.last_name) AS name 
-                        FROM employee e
-                        JOIN employee m ON e.manager_id = m.id;`;
-
-const queryEmployeesByManager = `SELECT e.id AS ID, concat(e.first_name, " ", e.last_name) AS Name FROM employee e
-WHERE e.manager_id = (SELECT id FROM (SELECT * FROM employee) AS A
-				WHERE concat(first_name, " ", last_name) = ?)
-`;
-
-const queryAllRoles = `SELECT id, title, salary FROM role;`;
-
-const queryAllDepartments = `SELECT name FROM department`;
-
-const queryEmployeesByDept = `SELECT e.id, concat(e.first_name, " ", e.last_name) AS name, d.name as department
-							FROM employee e
-							JOIN role r on r.id = e.role_id
-							JOIN department d ON d.id = r.department_id
-							WHERE d.id = ?`;
-
-const queryAddNewEmployee = `insert into employee ( first_name, last_name, role_id, manager_id )
-values 
-	(?, ?, (select id from role where title = ?),
-        (select id from  (SELECT * FROM employee) AS A 
-			where id = (select id from  (SELECT * FROM employee) AS A
-						where concat(first_name, " ", last_name) = ?
-                        )
-		)
-	);`
-
-const queryRemoveEmployee = `DELETE FROM employee WHERE concat(first_name, ' ', last_name) = ?`
-
-const queryUpdateEmployeeRole = `UPDATE employee 
-	SET role_id = (SELECT id FROM (SELECT * FROM role) AS A 
-					WHERE title = ?) 
-	WHERE id = (SELECT id from (SELECT * FROM employee) AS A 
-					WHERE concat(first_name, " ", last_name) = ?);`
-
-const queryUpdateManager = `UPDATE employee
-SET manager_id = (SELECT id FROM (SELECT * FROM employee) AS A
-				WHERE concat(first_name, " ", last_name) = ?) 
-WHERE id = (SELECT id FROM (SELECT * FROM employee) AS A
-            WHERE concat(first_name, " ", last_name) = ?)`;
-
-const queryAddRole = `INSERT INTO role 
-(title, salary, department_id)
-VALUES 
-	(?, ?, 
-		(SELECT id FROM department 
-		WHERE department.name = ?));`
-
-const queryRemoveRole = `DELETE FROM role
-                        WHERE title = ?;`
-
 const init = {
 	type: "list",
 	name: "action",
@@ -86,8 +25,8 @@ const init = {
 };
 
 // 0: View All Employees
-const getEmployees = function () {
-	connection.query(queryAllEmployees, (err, res) => {
+const getEmployees = function() {
+	connection.query(queries.allEmployees, (err, res) => {
 		if (err) throw err;
 		const output = res.map(item => {
 			const newItem = {
@@ -106,8 +45,8 @@ const getEmployees = function () {
 };
 
 // 1: View All Employees By Department
-const getEmployeesByDepartment = function () {
-	connection.query(queryAllDepartments, (err, res, fields) => {
+const getEmployeesByDepartment = function() {
+	connection.query(queries.allDepartments, (err, res, fields) => {
 		if (err) throw err;
 		const output = res.map(item => {
 			return item.name;
@@ -118,14 +57,14 @@ const getEmployeesByDepartment = function () {
 				name: "department",
 				choices: output,
 				message: "Which department do you want to check?",
-				filter: function (val) {
+				filter: function(val) {
 					const departmentId = output.indexOf(val) + 1;
 					return departmentId;
 				}
 			})
 			.then(department => {
 				connection.query(
-					queryEmployeesByDept,
+					queries.employeesByDept,
 					[department.department],
 					(err, res, fields) => {
 						if (err) throw err;
@@ -146,13 +85,13 @@ const getEmployeesByDepartment = function () {
 };
 
 // 2: View All Employees By Manager
-const getEmployeesByManager = function () {
-	connection.query(queryAllManagers, (err, res, fields) => {
+const getEmployeesByManager = function() {
+	connection.query(queries.allManagers, (err, res, fields) => {
 		if (err) throw err;
 		const output = res.map(item => {
 			const newItem = {
-				id: item.ID,
-				name: item.Name
+				id: item.id,
+				name: item.name
 			};
 			return newItem;
 		});
@@ -167,14 +106,14 @@ const getEmployeesByManager = function () {
 			])
 			.then(manager => {
 				connection.query(
-					queryEmployeesByManager,
+					queries.employeesByManager,
 					[manager.manager],
 					(err, res, fields) => {
 						if (err) throw err;
 						const output = res.map(item => {
 							const newItem = {
-								id: item.ID,
-								name: item.Name
+								id: item.id,
+								name: item.name
 							};
 							return newItem;
 						});
@@ -187,62 +126,100 @@ const getEmployeesByManager = function () {
 };
 
 // 3: Add Employee
-const addEmployee = function () {
-	connection.query(`${queryAllRoles}${queryAllManagers}`, (err, res, fields) => {
+const addEmployee = function() {
+	connection.query(
+		`${queries.allRoles}${queries.allManagers}`,
+		(err, res, fields) => {
+			if (err) throw err;
+			// multi-query returns results to both queries in an array
+			// get roles from first index
+			const roles = res[0].map(item => {
+				const newItem = {
+					name: item.title
+				};
+				return newItem;
+			});
+			// get managers from second index
+			const managers = res[1].map(item => {
+				const newItem = {
+					name: item.name
+				};
+				return newItem;
+			});
+			// Add a 'None' option if the employee is not to have a manager
+			managers.push({ name: "None" });
+			inquirer
+				.prompt([
+					{
+						type: "input",
+						name: "firstName",
+						message: "What is the employees first name?"
+					},
+					{
+						type: "input",
+						name: "lastName",
+						message: "What is the employees last name?"
+					},
+					{
+						type: "list",
+						name: "role",
+						choices: roles,
+						message: "What is the employee's role?"
+					},
+					{
+						type: "list",
+						name: "newManager",
+						choices: managers,
+						message: "Who is the employee's manager?"
+					}
+				])
+				.then(newEmployee => {
+					connection.query(
+						queries.addNewEmployee,
+						[
+							newEmployee.firstName,
+							newEmployee.lastName,
+							newEmployee.role,
+							newEmployee.newManager
+						],
+						(err, res, fields) => {
+							if (err) throw err;
+							getEmployees();
+						}
+					);
+				});
+		}
+	);
+};
+
+// 4: Remove Employee
+const removeEmployee = function() {
+	connection.query(queries.allEmployeesSimple, (err, res, fields) => {
 		if (err) throw err;
-		// multi-query returns results to both queries in an array
-		// get roles from first index
-		const roles = res[0].map(item => {
+		const output = res.map(item => {
 			const newItem = {
-				name: item.title
+				name: item.name
 			};
 			return newItem;
 		});
-		// get managers from second index
-		const managers = res[1].map(item => {
-			const newItem = {
-				name: item.name
-			}
-			return newItem;
-		})
-		// Add a 'None' option if the employee is not to have a manager
-		managers.push({ name: "None" });
 		inquirer
 			.prompt([
 				{
-					type: "input",
-					name: "firstName",
-					message: "What is the employees first name?"
-				},
-				{
-					type: "input",
-					name: "lastName",
-					message: "What is the employees last name?"
-				},
-				{
 					type: "list",
-					name: "role",
-					choices: roles,
-					message: "What is the employee's role?"
-				},
-				{
-					type: "list",
-					name: "newManager",
-					choices: managers,
-					message: "Who is the employee's manager?"
+					name: "employee",
+					choices: output,
+					message: "Which employee would you like to remove?"
 				}
 			])
-			.then(newEmployee => {
+			.then(employee => {
 				connection.query(
-					queryAddNewEmployee,
-					[
-						newEmployee.firstName,
-						newEmployee.lastName,
-						newEmployee.role,
-						newEmployee.newManager
-					],
+					queries.removeEmployee,
+					[employee.employee],
 					(err, res, fields) => {
 						if (err) throw err;
+						console.log(
+							"Successfully removed employee " + employee.employee
+						);
 						getEmployees();
 					}
 				);
@@ -250,77 +227,59 @@ const addEmployee = function () {
 	});
 };
 
-// 4: Remove Employee
-const removeEmployee = function () {
-	connection.query(queryAllEmployeesSimple, (err, res, fields) => {
-		if (err) throw err;
-		const output = res.map(item => {
-			const newItem = {
-				name: item.name
-			}
-			return newItem;
-		})
-		inquirer.prompt([{
-			type: "list",
-			name: "employee",
-			choices: output,
-			message: "Which employee would you like to remove?"
-		}]).then(employee => {
-			connection.query(queryRemoveEmployee, [employee.employee], (err, res, fields) => {
-				if (err) throw err;
-				console.log('Successfully removed employee ' + employee.employee)
-				getEmployees();
-			})
-		})
-	})
-}
-
 // 5: Update Employee Role
-const updateRole = function () {
+const updateRole = function() {
 	// select employee to update then select the new role
-	connection.query(`${queryAllEmployeesSimple};${queryAllRoles};`, (err, res, fields) => {
-		if (err) throw err;
-		const employees = res[0].map(item => {
-			const newItem = {
-				id: item.id,
-				name: item.name
-			};
-			return newItem;
-		});
-		const roles = res[1].map(item => {
-			const newItem = {
-				id: item.id,
-				name: item.title
-			};
-			return newItem;
-		});
-		inquirer
-			.prompt([
-				{
-					type: "list",
-					name: "hasNewRole",
-					choices: employees,
-					message: "Which employee would you like to update?"
-				},
-				{
-					type: "list",
-					name: "newRole",
-					choices: roles,
-					message: "What is thier new role?"
-				}
-			]).then(answers => {
-				console.log(answers);
-				connection.query(queryUpdateEmployeeRole, [answers.newRole, answers.hasNewRole], (err, res, fields) => {
-					if (err) throw err;
-					getEmployees();
-				})
-			})
-	})
+	connection.query(
+		`${queries.allEmployeesSimple}${queries.allRoles};`,
+		(err, res, fields) => {
+			if (err) throw err;
+			const employees = res[0].map(item => {
+				const newItem = {
+					id: item.id,
+					name: item.name
+				};
+				return newItem;
+			});
+			const roles = res[1].map(item => {
+				const newItem = {
+					id: item.id,
+					name: item.title
+				};
+				return newItem;
+			});
+			inquirer
+				.prompt([
+					{
+						type: "list",
+						name: "hasNewRole",
+						choices: employees,
+						message: "Which employee would you like to update?"
+					},
+					{
+						type: "list",
+						name: "newRole",
+						choices: roles,
+						message: "What is thier new role?"
+					}
+				])
+				.then(answers => {
+					connection.query(
+						queries.updateEmployeeRole,
+						[answers.newRole, answers.hasNewRole],
+						(err, res, fields) => {
+							if (err) throw err;
+							getEmployees();
+						}
+					);
+				});
+		}
+	);
 };
 
 // 6: Update Employee Manager
-const updateManager = function () {
-	connection.query(queryAllEmployeesSimple, (err, res, fields) => {
+const updateManager = function() {
+	connection.query(queries.allEmployeesSimple, (err, res, fields) => {
 		if (err) throw err;
 		const output = res.map(item => {
 			const newItem = {
@@ -345,10 +304,8 @@ const updateManager = function () {
 				}
 			])
 			.then(answers => {
-				// answers contains the names of the new manager and the employee
-				// use these in the query to get and set the manager id.
 				connection.query(
-					queryUpdateManager,
+					queries.updateManager,
 					[answers.newManager, answers.hasNewManager],
 					(err, res, fields) => {
 						if (err) throw err;
@@ -360,8 +317,8 @@ const updateManager = function () {
 };
 
 // 7: View All Roles
-const getRoles = function () {
-	connection.query(queryAllRoles, (err, res) => {
+const getAllRoles = function() {
+	connection.query(queries.allRoles, (err, res) => {
 		if (err) throw err;
 		const output = res.map(item => {
 			const newItem = {
@@ -378,8 +335,8 @@ const getRoles = function () {
 
 // 8: Add Role
 // get title, salary, department_id (from department) of new role.
-const addRole = function () {
-	connection.query(queryAllDepartments, (err, res, fields) => {
+const addRole = function() {
+	connection.query(queries.allDepartments, (err, res, fields) => {
 		if (err) throw err;
 		const departments = res.map(item => {
 			const newItem = {
@@ -387,86 +344,115 @@ const addRole = function () {
 			};
 			return newItem;
 		});
-		inquirer.prompt([
-			{
-				type: "list",
-				name: "department",
-				choices: departments,
-				message: "What department does this role belong in?"
-			},
-			{
-				type: "input",
-				name: "newRole",
-				message: "What is the name of the new role?"
-			},
-			{
-				type: "input",
-				name: "salary",
-				message: "What is the starting salary?"
-			}
-		]).then(answers => {
-			connection.query(queryAddRole, [answers.newRole, answers.salary, answers.department], (err, res, fields) => {
-				if (err) throw err;
-				console.log('Successfully added the ' + answers.newRole + ' role.')
-				showQuestions();
-			})
-		})
-	})
-}
-
+		inquirer
+			.prompt([
+				{
+					type: "list",
+					name: "department",
+					choices: departments,
+					message: "What department does this role belong in?"
+				},
+				{
+					type: "input",
+					name: "newRole",
+					message: "What is the name of the new role?"
+				},
+				{
+					type: "input",
+					name: "salary",
+					message: "What is the starting salary?"
+				}
+			])
+			.then(answers => {
+				connection.query(
+					queries.addRole,
+					[answers.newRole, answers.salary, answers.department],
+					(err, res, fields) => {
+						if (err) throw err;
+						console.log(
+							"Successfully added the " +
+								answers.newRole +
+								" role."
+						);
+						showQuestions();
+					}
+				);
+			});
+	});
+};
 
 // 9: Remove Role
-const deleteRole = function() {
-    connection.query(queryAllRoles, (err, res, fields) => {
-        if (err) throw err;
-        const output = res.map(item => {
-            const newItem = {
-                name: item.title
-            };
-            return newItem;
-        });
-        inquirer.prompt([
-            {
-                type: "list",
-                name: "roles",
-                choices: output,
-                message: "What role do you want to remove?"
-            }
-        ]).then(answers => {
-            connection.query(queryRemoveRole, [answers.roles], (err, res, fields) => {
-                if (err) throw err;
-                console.log('Successfully removed role ' + answers.roles);
-                showQuestions();
-            })
-        })
-    })
-}
+const removeRole = function() {
+	connection.query(queries.allRoles, (err, res, fields) => {
+		if (err) throw err;
+		const output = res.map(item => {
+			const newItem = {
+				name: item.title
+			};
+			return newItem;
+		});
+		inquirer
+			.prompt([
+				{
+					type: "list",
+					name: "roles",
+					choices: output,
+					message: "What role do you want to remove?"
+				}
+			])
+			.then(answers => {
+				connection.query(
+					queries.removeRole,
+					[answers.roles],
+					(err, res, fields) => {
+						if (err) throw err;
+						console.log(
+							"Successfully removed role " + answers.roles
+						);
+						showQuestions();
+					}
+				);
+			});
+	});
+};
 
-const showQuestions = function () {
+const showQuestions = function() {
 	inquirer.prompt(init).then(answers => {
-		if (answers.action == choices[0]) {
-			getEmployees();
-		} else if (answers.action == choices[1]) {
-			getEmployeesByDepartment();
-		} else if (answers.action == choices[2]) {
-			getEmployeesByManager();
-		} else if (answers.action == choices[3]) {
-			addEmployee();
-		} else if (answers.action == choices[4]) {
-			removeEmployee();
-		} else if (answers.action == choices[5]) {
-			updateRole();
-		} else if (answers.action == choices[6]) {
-			updateManager();
-		} else if (answers.action == choices[7]) {
-			getRoles();
-		} else if (answers.action == choices[8]) {
-			addRole();
-		} else if (answers.action == choices[9]) {
-			deleteRole();
-		} else if (answers.action == choices[10]) {
-			//return 0;
-			process.exit();
+		switch (answers.action) {
+			case "View All Employees":
+				getEmployees();
+				break;
+			case "View All Employees By Department":
+				getEmployeesByDepartment();
+				break;
+			case "View All Employees By Manager":
+				getEmployeesByManager();
+				break;
+			case "Add Employee":
+				addEmployee();
+				break;
+			case "Remove Employee":
+				removeEmployee();
+				break;
+			case "Update Employee Role":
+				updateRole();
+				break;
+			case "Update Employee Manager":
+				updateManager();
+				break;
+			case "View All Roles":
+				getAllRoles();
+				break;
+			case "Add Role":
+				addRole();
+				break;
+			case "Remove Role":
+				removeRole();
+				break;
+			case "Quit":
+				connection.end();
+				process.exit();
+				break;
 		}
 	});
 };

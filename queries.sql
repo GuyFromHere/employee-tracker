@@ -73,6 +73,7 @@ VALUES
 	("[TITLE]", "[SALARY]", 
 		(SELECT id FROM department 
 		WHERE department.name = "[DEPARTMENT NAME]"));
+        
 -- remove role
 DELETE FROM role
 WHERE title = ?;
