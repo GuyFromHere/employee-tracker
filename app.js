@@ -14,6 +14,9 @@ const choices = [
 	"View All Roles",
 	"Add Role",
 	"Remove Role",
+	"View Departments",
+	"Add Department",
+	"Remove Department",
 	"Quit"
 ];
 
@@ -416,6 +419,85 @@ const removeRole = function() {
 	});
 };
 
+// Get All Departments
+const getAllDepartments = function() {
+	connection.query(queries.allDepartments, (err, result, fields) => {
+		if (err) throw err;
+		const output = result.map(item => {
+			const newItem = {
+				id: item.id,
+				name: item.name
+			};
+			return newItem;
+		});
+		console.table(output);
+		showQuestions();
+	});
+};
+
+// Add Department
+const addDepartment = function() {
+	inquirer
+		.prompt([
+			{
+				type: "input",
+				name: "newDepartment",
+				message: "What is the name of the new department?"
+			}
+		])
+		.then(answers => {
+			connection.query(
+				queries.addDepartment,
+				[answers.newDepartment],
+				(err, result, fields) => {
+					if (err) throw err;
+					console.log(
+						"Successfully added the " +
+							answers.newDepartment +
+							" department."
+					);
+					showQuestions();
+				}
+			);
+		});
+};
+
+// Remove
+const removeDepartment = function() {
+	connection.query(queries.allDepartments, (err, result) => {
+		if (err) throw err;
+		const output = result.map(item => {
+			const newItem = {
+				name: item.name
+			};
+			return newItem;
+		});
+		inquirer
+			.prompt([
+				{
+					type: "list",
+					name: "departments",
+					choices: output,
+					message: "What department do you want to remove?"
+				}
+			])
+			.then(answers => {
+				connection.query(
+					queries.removeDepartment,
+					[answers.departments],
+					(err, result, fields) => {
+						if (err) throw err;
+						console.log(
+							"Successfully removed department " +
+								answers.department
+						);
+						showQuestions();
+					}
+				);
+			});
+	});
+};
+
 const showQuestions = function() {
 	inquirer.prompt(init).then(answers => {
 		switch (answers.action) {
@@ -448,6 +530,15 @@ const showQuestions = function() {
 				break;
 			case "Remove Role":
 				removeRole();
+				break;
+			case "View Departments":
+				getAllDepartments();
+				break;
+			case "Add Department":
+				addDepartment();
+				break;
+			case "Remove Department":
+				removeDepartment();
 				break;
 			case "Quit":
 				connection.end();

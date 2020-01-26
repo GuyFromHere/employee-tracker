@@ -1,3 +1,6 @@
+const addDepartment = `INSERT INTO department (name)
+                        VALUES (?);`;
+
 const addNewEmployee = `insert into employee ( first_name, last_name, role_id, manager_id )
 values 
 	(?, ?, (select id from role where title = ?),
@@ -15,33 +18,42 @@ VALUES
 		(SELECT id FROM department 
 		WHERE department.name = ?));`;
 
-const allDepartments = `SELECT name FROM department;`;
+const allDepartments = `SELECT * FROM department
+                        ORDER BY id;`;
 
 const allEmployees = `SELECT e.id, concat(e.first_name, " ", e.last_name) AS name, r.title, d.name as department, r.salary, concat(m.first_name, " ", m.last_name) as Manager
 FROM employee e
 JOIN role r ON r.id = e.role_id
 JOIN department d ON d.id = r.department_id
-LEFT JOIN employee m ON e.manager_id = m.id;
-`;
+LEFT JOIN employee m ON e.manager_id = m.id
+ORDER BY e.id;`;
 
-const allEmployeesSimple = `SELECT id, concat(first_name, " ", last_name) AS name FROM employee;`;
+const allEmployeesSimple = `SELECT id, concat(first_name, " ", last_name) AS name 
+                            FROM employee
+                            ORDER BY id;`;
 
-const allRoles = `SELECT id, title, salary FROM role;`;
+const allRoles = `SELECT id, title, salary FROM role
+                ORDER BY id;`;
 
 const allManagers = `SELECT DISTINCT e.manager_id AS id, concat(m.first_name, " ", m.last_name) AS name 
                         FROM employee e
-                        JOIN employee m ON e.manager_id = m.id;`;
+                        JOIN employee m ON e.manager_id = m.id
+                        ORDER BY id;`;
 
 const employeesByManager = `SELECT e.id AS id, concat(e.first_name, " ", e.last_name) AS name FROM employee e
 WHERE e.manager_id = (SELECT id FROM (SELECT * FROM employee) AS A
-				WHERE concat(first_name, " ", last_name) = ?);
+                WHERE concat(first_name, " ", last_name) = ?)
+                ORDER BY e.id;
 `;
 
 const employeesByDept = `SELECT e.id, concat(e.first_name, " ", e.last_name) AS name, d.name as department
 							FROM employee e
 							JOIN role r on r.id = e.role_id
 							JOIN department d ON d.id = r.department_id
-							WHERE d.id = ?;`;
+                            WHERE d.id = ?
+                            ORDER BY e.id;`;
+
+const removeDepartment = `DELETE FROM department WHERE name = ?;`;
 
 const removeEmployee = `DELETE FROM employee WHERE concat(first_name, ' ', last_name) = ?;`;
 
@@ -61,6 +73,7 @@ WHERE id = (SELECT id FROM (SELECT * FROM employee) AS A
             WHERE concat(first_name, " ", last_name) = ?)`;
 
 module.exports = {
+	addDepartment,
 	addNewEmployee,
 	addRole,
 	allDepartments,
@@ -70,6 +83,7 @@ module.exports = {
 	allRoles,
 	employeesByDept,
 	employeesByManager,
+	removeDepartment,
 	removeEmployee,
 	removeRole,
 	updateEmployeeRole,
